@@ -1,5 +1,5 @@
-import {fs} from 'fs';
-import {path} from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { default as YAML } from "js-yaml";
 import { ClassicLevel } from "classic-level";
 
