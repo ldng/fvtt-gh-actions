@@ -1,13 +1,12 @@
 name: 'Fvtt Action'
 description: 'Foundry VTT action to help manage modules & systems'
 inputs:
-  who-to-greet:  # id of input
-    description: 'Who to greet'
+  src:
+    description: 'Source to compile into compendium'
     required: true
-    default: 'World'
-outputs:
-  time: # id of output
-    description: 'The time we greeted you'
+  dest:
+    description: 'Destination of the compendium'
+    required: true
 runs:
   using: 'node20'
   main: 'dist/index.js'
