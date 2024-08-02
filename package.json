@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "index.js",
   "scripts": {
     "lint": "eslint src",
     "test": "mocha",
-    "ncc": "npx @vercel/ncc build src/index.mjs -o dist",
+    "ncc": "NODE_OPTIONS='--experimental-vm-modules' npx @vercel/ncc build src/index.mjs -o dist --target es2020 -m && sed -i 's/=require/=__WEBPACK_EXTERNAL_createRequire(import.meta.url)/' dist/index.mjs",
     "clean": "rm -rf node_modules dist"
   },
   "keywords": [],
