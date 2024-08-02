@@ -1,7 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { default as YAML } from "js-yaml";
-import { ClassicLevel } from "classic-level";
+import { readdirSync, mkdirSync, readFileSync } from "fs";
+import { join, extname } from "path";
+import { load } from "js-yaml";
+import { ClassicLevel } from 'classic-level';
 
 /**
  * A flattened view of the Document hierarchy. The type of the value determines what type of collection it is. Arrays
@@ -62,19 +62,16 @@ const HIERARCHY = {
  * @param {Partial<CompileOptions>} [options]
  * @returns {string[]}
  */
-function findSourceFiles(root, { yaml=false, recursive=false }={}) {
+function findSourceFiles(root, { recursive = false } = {}) {
   const files = [];
-  for ( const entry of fs.readdirSync(root, { withFileTypes: true }) ) {
-    const name = path.join(root, entry.name);
-    if ( entry.isDirectory() && recursive ) {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const name = join(root, entry.name);
+    if (entry.isDirectory() && recursive) {
       files.push(...findSourceFiles(name, { yaml, recursive }));
       continue;
     }
-    if ( !entry.isFile() ) continue;
-    const ext = path.extname(name);
-    const isYaml = (ext === ".yml") || (ext === ".yaml");
-    if ( yaml && isYaml ) files.push(name);
-    else if ( !yaml && (ext === ".json") ) files.push(name);
+    if (!entry.isFile()) continue;
+    files.push(name);
   }
   return files;
 }
@@ -87,14 +84,14 @@ function findSourceFiles(root, { yaml=false, recursive=false }={}) {
  * @returns {HierarchyApplyCallback}   The wrapped function.
  */
 function applyHierarchy(fn) {
-  const apply = async (doc, collection, options={}) => {
+  const apply = async (doc, collection, options = {}) => {
     const newOptions = await fn(doc, collection, options);
-    for ( const [embeddedCollectionName, type] of Object.entries(HIERARCHY[collection] ?? {}) ) {
+    for (const [embeddedCollectionName, type] of Object.entries(HIERARCHY[collection] ?? {})) {
       const embeddedValue = doc[embeddedCollectionName];
-      if ( Array.isArray(type) && Array.isArray(embeddedValue) ) {
-        for ( const embeddedDoc of embeddedValue ) await apply(embeddedDoc, embeddedCollectionName, newOptions);
+      if (Array.isArray(type) && Array.isArray(embeddedValue)) {
+        for (const embeddedDoc of embeddedValue) await apply(embeddedDoc, embeddedCollectionName, newOptions);
       }
-      else if ( embeddedValue ) await apply(embeddedValue, embeddedCollectionName, newOptions);
+      else if (embeddedValue) await apply(embeddedValue, embeddedCollectionName, newOptions);
     }
   };
   return apply;
@@ -109,17 +106,17 @@ function applyHierarchy(fn) {
  * @param {HierarchyMapCallback} fn  The function to invoke.
  */
 async function mapHierarchy(doc, collection, fn) {
-  for ( const [embeddedCollectionName, type] of Object.entries(HIERARCHY[collection] ?? {}) ) {
+  for (const [embeddedCollectionName, type] of Object.entries(HIERARCHY[collection] ?? {})) {
     const embeddedValue = doc[embeddedCollectionName];
-    if ( Array.isArray(type) ) {
-      if ( Array.isArray(embeddedValue) ) {
+    if (Array.isArray(type)) {
+      if (Array.isArray(embeddedValue)) {
         doc[embeddedCollectionName] = await Promise.all(embeddedValue.map(entry => {
           return fn(entry, embeddedCollectionName);
         }));
       }
       else doc[embeddedCollectionName] = [];
     } else {
-      if ( embeddedValue ) doc[embeddedCollectionName] = await fn(embeddedValue, embeddedCollectionName);
+      if (embeddedValue) doc[embeddedCollectionName] = await fn(embeddedValue, embeddedCollectionName);
       else doc[embeddedCollectionName] = null;
     }
   }
@@ -141,7 +138,7 @@ async function compactClassicLevel(db) {
   const lastKey = await backwardIterator.next();
   await backwardIterator.close();
 
-  if ( firstKey && lastKey ) return db.compactRange(firstKey, lastKey, { keyEncoding: "utf8" });
+  if (firstKey && lastKey) return db.compactRange(firstKey, lastKey, { keyEncoding: "utf8" });
 }
 
 /* -------------------------------------------- */
@@ -153,9 +150,9 @@ async function compactClassicLevel(db) {
  * @param {Partial<PackageOptions>} [options]
  * @returns {Promise<void>}
  */
-async function compileClassicLevel(pack, files, { log, transformEntry }={}) {
+async function compileClassicLevel(pack, files, { log, transformEntry } = {}) {
   // Create the classic level directory if it doesn't already exist.
-  fs.mkdirSync(pack, { recursive: true });
+  mkdirSync(pack, { recursive: true });
 
   // Load the directory as a ClassicLevel DB.
   const db = new ClassicLevel(pack, { keyEncoding: "utf8", valueEncoding: "json" });
@@ -165,7 +162,7 @@ async function compileClassicLevel(pack, files, { log, transformEntry }={}) {
   const packDoc = applyHierarchy(async (doc, collection) => {
     const key = doc._key;
     delete doc._key;
-    if ( seenKeys.has(key) ) {
+    if (seenKeys.has(key)) {
       throw new Error(`An entry with key '${key}' was already packed and would be overwritten by this entry.`);
     }
     seenKeys.add(key);
@@ -175,27 +172,27 @@ async function compileClassicLevel(pack, files, { log, transformEntry }={}) {
   });
 
   // Iterate over all files in the input directory, writing them to the DB.
-  for ( const file of files ) {
+  for (const file of files) {
     try {
-      const contents = fs.readFileSync(file, "utf8");
-      const ext = path.extname(file);
+      const contents = readFileSync(file, "utf8");
+      const ext = extname(file);
       const isYaml = ext === ".yml" || ext === ".yaml";
-      const doc = isYaml ? YAML.load(contents) : JSON.parse(contents);
+      const doc = isYaml ? load(contents) : JSON.parse(contents);
       const [, collection] = doc._key.split("!");
-      if ( await transformEntry?.(doc) === false ) continue;
+      if (await transformEntry?.(doc) === false) continue;
       await packDoc(doc, collection);
-      if ( log ) console.log(`Packed ${doc._id}${doc.name}`);
-    } catch ( err ) {
-      if ( log ) console.error(`Failed to pack ${file}. See error below.`);
+      if (log) console.log(`Packed ${doc._id}${doc.name}`);
+    } catch (err) {
+      if (log) console.error(`Failed to pack ${file}. See error below.`);
       throw err;
     }
   }
 
   // Remove any entries in the DB that are not part of the source set.
-  for ( const key of await db.keys().all() ) {
-    if ( !seenKeys.has(key) ) {
+  for (const key of await db.keys().all()) {
+    if (!seenKeys.has(key)) {
       batch.del(key);
-      if ( log ) console.log(`Removed ${key}`);
+      if (log) console.log(`Removed ${key}`);
     }
   }
 
@@ -216,9 +213,9 @@ async function compileClassicLevel(pack, files, { log, transformEntry }={}) {
  * @returns {Promise<void>}
  */
 export async function compilePack(src, dest, {
-    yaml=false, recursive=false, log=false, transformEntry
-  }={}) {
-    const files = findSourceFiles(src, { yaml, recursive });
-    return compileClassicLevel(dest, files, { log, transformEntry });
-  }
-  
+  yaml = false, recursive = false, log = false, transformEntry
+} = {}) {
+  const files = findSourceFiles(src, { yaml, recursive });
+  return compileClassicLevel(dest, files, { log, transformEntry });
+}
+

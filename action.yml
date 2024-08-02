@@ -2,11 +2,11 @@ name: 'Fvtt Action'
 description: 'Foundry VTT action to help manage modules & systems'
 inputs:
   src:
-    description: 'Source to compile into compendium'
+    description: 'Source directory to compile into compendium'
     required: true
   dest:
-    description: 'Destination of the compendium'
+    description: 'Destination directory for the packed compendium'
     required: true
 runs:
   using: 'node20'
-  main: 'index.js'
+  main: 'dist/index.js'
