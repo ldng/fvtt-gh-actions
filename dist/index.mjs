@@ -8225,7 +8225,7 @@ module.exports = process.nextTick.bind(process)
 /***/ 5598:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = require(__nccwpck_require__.ab + "prebuilds/linux-x64/node.napi.glibc.node")
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)(__nccwpck_require__.ab + "prebuilds/linux-x64/node.napi.glibc.node")
 
 
 /***/ }),
