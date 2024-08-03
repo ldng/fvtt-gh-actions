@@ -4108,7 +4108,7 @@ module.exports = process.nextTick.bind(process)
 /***/ 5598:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = require(__nccwpck_require__.ab + "build/Release/classic_level.node")
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)(__nccwpck_require__.ab + "build/Release/classic_level.node")
 
 
 /***/ }),
